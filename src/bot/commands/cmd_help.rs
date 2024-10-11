@@ -1,4 +1,4 @@
-use crate::{Context, Error};
+use crate::bot::client::{Context, MusicBotError};
 
 #[poise::command(prefix_command, track_edits, slash_command)]
 pub async fn help(
@@ -6,7 +6,7 @@ pub async fn help(
     #[description = "Specific command to show help about"]
     #[autocomplete = "poise::builtins::autocomplete_command"]
     command: Option<String>,
-) -> Result<(), Error> {
+) -> Result<(), MusicBotError> {
     poise::builtins::help(
         ctx,
         command.as_deref(),
