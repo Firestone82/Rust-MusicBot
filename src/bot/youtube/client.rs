@@ -1,4 +1,4 @@
-use crate::bot::handlers::playback_handler::{Video, VideoMetadata};
+use crate::bot::player::playback::{Track, TrackMetadata};
 use dotenv::var;
 use google_youtube3::api::SearchResult;
 use google_youtube3::client::NoToken;
@@ -47,7 +47,7 @@ impl YoutubeClient {
         }
     }
 
-    pub async fn search_video(&self, url: String) -> Result<Video, YoutubeError> {
+    pub async fn search_video(&self, url: String) -> Result<Track, YoutubeError> {
         let request = self
             .youtube
             .search()
@@ -81,13 +81,13 @@ impl YoutubeClient {
             .as_ref()
             .and_then(|resource_id| resource_id.video_id.clone());
 
-        let metadata: Option<VideoMetadata> = result.snippet.as_ref().and_then(|snippet| {
+        let metadata: Option<TrackMetadata> = result.snippet.as_ref().and_then(|snippet| {
             let title: Option<&String> = snippet.title.as_ref();
             let channel: Option<&String> = snippet.channel_title.as_ref();
 
             match (video_id.clone(), title, channel) {
                 (Some(video_id), Some(title), Some(channel)) => Some(
-                    VideoMetadata {
+                    TrackMetadata {
                         title: decode_html_entities(title).to_string(),
                         channel: decode_html_entities(channel).to_string(),
                         url: format!("{SINGLE_URI}{video_id}"),
@@ -99,9 +99,9 @@ impl YoutubeClient {
 
         match(video_id, metadata) {
             (Some(id), Some(metadata)) => Ok(
-                Video {
+                Track {
                     id,
-                    metadata
+                    metadata,
                 }
             ),
             _ => Err(YoutubeError::InternalError("Failed to parse video".to_string()))

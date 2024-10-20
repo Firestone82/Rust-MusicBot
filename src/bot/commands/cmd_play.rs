@@ -1,7 +1,9 @@
 use crate::bot::{
-    checks::author_in_voice_channel::check_author_in_voice_channel,
+    checks::channel_checks::check_author_in_same_voice_channel,
     client::{Context, MusicBotError},
-    handlers::{channel_handler, playback_handler::Video},
+    handlers::channel_handler,
+    handlers::playback_handler,
+    player::playback::Track,
     youtube::client::{YoutubeClient, YoutubeError}
 };
 use poise::CreateReply;
@@ -9,12 +11,9 @@ use serenity::all::{Color, CreateEmbed};
 
 #[poise::command(
     prefix_command,
-    check = "check_author_in_voice_channel",
+    check = "check_author_in_same_voice_channel",
 )]
-pub async fn play(
-    ctx: Context<'_>,
-    youtube_url: String,
-) -> Result<(), MusicBotError> {
+pub async fn play(ctx: Context<'_>, youtube_url: String) -> Result<(), MusicBotError> {
     if let Err(error) = channel_handler::join_user_channel(ctx).await {
         let embed: CreateEmbed = CreateEmbed::new()
             .color(Color::RED)
@@ -26,21 +25,12 @@ pub async fn play(
     }
 
     let youtube_client: &YoutubeClient = &ctx.data().youtube_client;
-    let result: Result<Video, YoutubeError> = youtube_client.search_video(youtube_url).await;
+    let result: Result<Track, YoutubeError> = youtube_client.search_video(youtube_url).await;
 
     match result {
-        Ok(video) => {
-            let embed: CreateEmbed = CreateEmbed::new()
-                .color(Color::DARK_GREEN)
-                .title("Video found")
-                .description(format!("Video: {:?}", video.metadata.title));
-
-            println!("Video found: {:?}", video.metadata.title);
-            ctx.send(CreateReply::default().embed(embed)).await?;
-
-            let mut guard= ctx.data().player.write().await;
-            guard.add_to_queue(video);
-            drop(guard);
+        Ok(track) => {
+            playback_handler::add_queue_video(ctx, track).await?;
+            playback_handler::start_queue_playback(ctx).await?;
         }
 
         Err(error) => {

@@ -1,1 +1,1 @@
-pub(crate) mod author_in_voice_channel;
+pub mod channel_checks;

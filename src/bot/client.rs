@@ -1,5 +1,5 @@
 use crate::bot::commands;
-use crate::bot::handlers::playback_handler::Player;
+use crate::bot::player::playback::Playback;
 use crate::bot::youtube::client::YoutubeClient;
 use dotenv::var;
 use poise::serenity_prelude;
@@ -19,12 +19,15 @@ pub enum MusicBotError {
     #[error("User not in voice channel")]
     UserNotInVoiceChannelError,
 
+    #[error("Bot not in voice channel")]
+    BotNotInVoiceChannelError,
+
     #[error("Unable to join voice channel")]
     UnableToJoinVoiceChannelError,
 }
 
 impl From<poise::serenity_prelude::Error> for MusicBotError {
-    fn from(value: poise::serenity_prelude::Error) -> Self {
+    fn from(value: serenity_prelude::Error) -> Self {
         MusicBotError::InternalError(value.to_string())
     }
 }
@@ -32,11 +35,11 @@ impl From<poise::serenity_prelude::Error> for MusicBotError {
 pub struct MusicBotData {
     pub request_client: reqwest::Client,
     pub youtube_client: YoutubeClient,
-    pub player: Arc<RwLock<Player>>
+    pub playback: Arc<RwLock<Playback>>
 }
 
 pub struct MusicBotClient {
-    serenity_client: poise::serenity_prelude::Client,
+    serenity_client: serenity_prelude::Client,
 }
 
 impl MusicBotClient {
@@ -96,7 +99,7 @@ impl MusicBotClient {
                     Ok(MusicBotData {
                         request_client: reqwest::Client::new(),
                         youtube_client: YoutubeClient::new(),
-                        player:  Arc::new(RwLock::new(Player::new())),
+                        playback:  Arc::new(RwLock::new(Playback::new())),
                     })
                 })
             })
