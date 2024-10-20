@@ -62,6 +62,8 @@ impl MusicBotClient {
                 commands: vec![
                     commands::cmd_help::help(),
                     commands::cmd_play::play(),
+                    commands::cmd_stop::stop(),
+                    commands::cmd_skip::skip(),
                 ],
                 prefix_options: poise::PrefixFrameworkOptions {
                     prefix: Some(String::from("!")),
@@ -99,7 +101,7 @@ impl MusicBotClient {
                     Ok(MusicBotData {
                         request_client: reqwest::Client::new(),
                         youtube_client: YoutubeClient::new(),
-                        playback:  Arc::new(RwLock::new(Playback::new())),
+                        playback:  Arc::new(RwLock::new(Playback::default())),
                     })
                 })
             })
