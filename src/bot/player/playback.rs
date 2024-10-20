@@ -23,7 +23,7 @@ pub struct TrackMetadata {
 }
 
 pub struct Playback {
-    pub playing: bool,
+    pub is_playing: bool,
     pub current_track: Option<Track>,
     pub track_handle: Option<TrackHandle>,
     pub queue: Vec<Track>
@@ -39,7 +39,7 @@ impl Default for Playback {
 impl Playback {
     pub fn new() -> Self {
         Self {
-            playing: false,
+            is_playing: false,
             queue: Vec::new(),
             track_handle: None,
             current_track: None
@@ -51,45 +51,39 @@ impl Playback {
     }
     
     pub fn change_playing_state(&mut self, state: bool) {
-        if self.playing == state {
+        if self.is_playing == state {
             return;
         }
 
-        self.playing = state;
-    }
-    
-    pub fn is_playing(&self) -> bool {
-        self.playing
-    }
-    
-    pub fn get_current_track(&self) -> Option<&Track> {
-        self.current_track.as_ref()
-    }
-
-    pub fn set_handle(&mut self, handle: TrackHandle) {
-        self.track_handle = Option::from(handle);
+        self.is_playing = state;
     }
     
     pub fn play_next(&mut self) -> Option<&Track> {
         if self.queue.is_empty() {
-            self.playing = false;
+            self.change_playing_state(false);
             return None;
         }
 
-        if self.playing {
-            let current: Option<&Track> = self.get_current_track();
-
-            // if let Some(track) = current {
-            //     if let Some(handle) = track.handle.as_ref() {
-            //         handle.stop().expect("Unable to stop current playing track");
-            //     }
-            // }
+        if self.is_playing {
+            self.stop();
         }
         
         let track: Track = self.queue.remove(0);
         self.current_track = Option::from(track);
-        self.playing = true;
-        
+        self.change_playing_state(true);
+
         self.current_track.as_ref()
     }
+    
+    pub fn stop(&mut self) {
+        self.queue.clear();
+        self.change_playing_state(false);
+        
+        if let Some(track_handle) = &self.track_handle {
+            if let Err(err) = track_handle.stop() {
+                println!("Error stopping track: {:?}", err);
+            }
+        }
+    }
+    
 }

@@ -12,7 +12,7 @@ use tokio::sync::{Mutex, MutexGuard};
 pub async fn start_queue_playback(ctx: Context<'_>) -> Result<(), MusicBotError> {
     let mut playback= ctx.data().playback.write().await;
 
-    if playback.is_playing() {
+    if playback.is_playing {
         return Ok(());
     } else {
         println!("Starting queue playback");
@@ -34,7 +34,7 @@ pub async fn start_queue_playback(ctx: Context<'_>) -> Result<(), MusicBotError>
 
     match playback.play_next() {
         Some(next_track) => {
-            println!(" - Playing next track: {}", next_track.metadata.title);
+            println!("- Playing next track: {}", next_track.metadata.title);
 
             let req_client: &Client = &ctx.data().request_client;
 
@@ -42,20 +42,24 @@ pub async fn start_queue_playback(ctx: Context<'_>) -> Result<(), MusicBotError>
             let track: YoutubeDl = YoutubeDl::new(req_client.clone(), next_track.metadata.url.clone());
             let track_handle: TrackHandle = guard.play(track.into());
 
-            let _ = track_handle.add_event(
-                Event::Track(TrackEvent::End),
-                QueueHandler::new(
-                    manager.clone(),
-                    req_client.clone(),
-                    ctx.data().playback.clone()
+            let _ = track_handle
+                .add_event(
+                    Event::Track(TrackEvent::End),
+                    QueueHandler::new(
+                        manager.clone(),
+                        req_client.clone(),
+                        ctx.data().playback.clone()
+                    )
                 )
-            );
+                .map_err(|e| {
+                    println!("Error adding event to track handle: {:?}", e);
+                });
 
-            playback.set_handle(track_handle);
+            playback.track_handle = Some(track_handle);
         }
 
         None => {
-            println!(" - No more tracks to play. Stopping playback.");
+            println!("- No more tracks to play. Stopping playback.");
             playback.change_playing_state(false);
         }
     }
@@ -66,8 +70,18 @@ pub async fn start_queue_playback(ctx: Context<'_>) -> Result<(), MusicBotError>
 pub async fn add_queue_video(ctx: Context<'_>, video: Track) -> Result<(), MusicBotError> {
     let mut playback= ctx.data().playback.write().await;
 
+    println!("Adding video to queue: {}", video.metadata.title);
     playback.add_to_queue(video);
 
     drop(playback);
+    Ok(())
+}
+
+pub async fn stop_queue_playback(ctx: Context<'_>) -> Result<(), MusicBotError> {
+    let mut playback= ctx.data().playback.write().await;
+
+    println!("Stopping queue playback");
+    playback.stop();
+
     Ok(())
 }
