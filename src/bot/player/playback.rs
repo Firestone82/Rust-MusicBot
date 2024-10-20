@@ -169,7 +169,7 @@ impl Playback {
         // Send "Playback stopped message"
         let embed: CreateEmbed = CreateEmbed::new()
             .color(Color::DARK_RED)
-            .title("⏹️ Playback stopped")
+            .title("⏹️  Playback stopped")
             .description("Playback has been stopped.")
             .timestamp(Timestamp::now());
         let _ = message_handler::send_embed(&ctx, embed, true).await;
@@ -198,7 +198,7 @@ impl Playback {
         // Send "Track skipped message"
         let embed: CreateEmbed = CreateEmbed::new()
             .color(Color::DARK_GREEN)
-            .title("⏩ Track skipped")
+            .title("⏩  Track skipped")
             .description("**Successfully** skipped currently running track!");
         let _ = message_handler::send_embed(&ctx, embed, true).await;
 
@@ -239,10 +239,29 @@ impl Playback {
         // Send "Playback stopped message"
         let embed: CreateEmbed = CreateEmbed::new()
             .color(Color::DARK_RED)
-            .title("⏹️ Playback stopped")
+            .title("⏹️  Playback stopped")
             .description("Playback has been stopped.")
             .timestamp(Timestamp::now());
         let _ = message_handler::send_embed(&ctx, embed, true).await;
+
+        Ok(())
+    }
+    
+    pub async fn set_volume(&mut self, ctx: Context<'_>, volume: f32) -> Result<(), PlaybackError> {
+        println!("Setting volume to: {}", volume);
+
+        if let Some(track_handle) = &self.track_handle {
+            match track_handle.set_volume(volume) {
+                Ok(_) => {
+                    println!("- Volume set to: {}", volume);
+                }
+
+                Err(e) => {
+                    println!("- Error setting volume: {:?}", e);
+                    return Err(PlaybackError::InternalError(format!("Error setting volume: {:?}", e)));
+                }
+            }
+        }
 
         Ok(())
     }
