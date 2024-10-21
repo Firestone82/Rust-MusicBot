@@ -3,7 +3,6 @@
 use crate::bot::client::{MusicBotClient, MusicBotError};
 
 pub mod bot;
-pub mod event_handlers;
 
 #[tokio::main]
 async fn main() -> Result<(), MusicBotError> {

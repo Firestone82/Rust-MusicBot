@@ -1,6 +1,11 @@
-use crate::bot::client::{Context, MusicBotError};
-use crate::bot::handlers::disconnect_handler::{DisconnectHandler, InactivityHandler};
-use crate::event_handlers::error_handler::ErrorHandler;
+use crate::bot::{
+    client::{Context, MusicBotError},
+    handlers::{
+        disconnect_handler::DisconnectHandler,
+        inactive_handler::InactivityHandler,
+    }
+};
+use crate::bot::handlers::error_handler::ErrorHandler;
 use serenity::all::{ChannelId, GuildId, UserId};
 use songbird::{CoreEvent, Event, Songbird};
 use std::sync::Arc;

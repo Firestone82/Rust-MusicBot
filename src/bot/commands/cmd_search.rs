@@ -1,16 +1,16 @@
-use crate::bot::player::playback::Playback;
 use crate::bot::{
     checks::channel_checks::check_author_in_same_voice_channel,
     client::{Context, MusicBotError},
     handlers::{channel_handler, message_handler},
-    player::playback::Track,
+    player::playback::{Playback, Track},
     youtube::client::{YoutubeClient, YoutubeError}
 };
 use poise::CreateReply;
-use serenity::all::ReactionType;
-use serenity::builder::CreateEmbed;
-use std::str::FromStr;
-use std::time::Duration;
+use serenity::all::{CreateEmbed, ReactionType};
+use std::{
+    str::FromStr,
+    time::Duration
+};
 use tokio::sync::RwLockWriteGuard;
 
 #[poise::command(
@@ -36,7 +36,7 @@ pub async fn search(ctx: Context<'_>, youtube_url: Vec<String>) -> Result<(), Mu
 
             let mut index = 1;
             for track in tracks.clone() {
-                embed = embed.field(format!(":number_{}:  {}", index, track.metadata.title), track.metadata.url, false);
+                embed = embed.field(format!(":number_{}:  {}", index, track.metadata.title), track.metadata.track_url, false);
                 index += 1;
             }
 

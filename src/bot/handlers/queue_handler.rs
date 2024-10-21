@@ -45,7 +45,7 @@ impl EventHandler for QueueHandler {
 
                 // Play the next track
                 let mut guard: MutexGuard<Call> = self.manager.lock().await;
-                let track: YoutubeDl = YoutubeDl::new(self.req_client.clone(), next_track.metadata.url.clone());
+                let track: YoutubeDl = YoutubeDl::new(self.req_client.clone(), next_track.metadata.track_url.clone());
                 let track_handle: TrackHandle = guard.play(track.into());
 
                 // Add event to handle the track end

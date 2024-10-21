@@ -33,7 +33,8 @@ pub struct Track {
 pub struct TrackMetadata {
     pub title: String,
     pub channel: String,
-    pub url: String,
+    pub track_url: String,
+    pub thumbnail_url: String,
 }
 
 #[derive(AllArgsConstructor, NoArgsConstructor)]
@@ -46,14 +47,14 @@ pub struct Playback {
 
 impl Playback {
     pub async fn add_track_to_queue(&mut self, ctx: Context<'_>, track: Track) -> Result<(), PlaybackError>{
-        println!("Adding track to queue: {}", track.metadata.url);
+        println!("Adding track to queue: {}", track.metadata.track_url);
         self.queue.push(track.clone());
         println!("- Queue length: {}", self.queue.len());
         
         let embed: CreateEmbed = CreateEmbed::new()
             .color(Color::DARK_GREEN)
             .title("🎵  Track added to queue")
-            .description(format!("**[{}]({})**", track.metadata.title, track.metadata.url))
+            .description(format!("**[{}]({})**", track.metadata.title, track.metadata.track_url))
             .footer(CreateEmbedFooter::new(format!("Queue length: {}", self.queue.len())));
         let _ = message_handler::send_embed(&ctx, embed, true).await;
         
@@ -102,7 +103,7 @@ impl Playback {
 
                 // Play the next track
                 let mut guard: MutexGuard<Call> = manager.lock().await;
-                let track: YoutubeDl = YoutubeDl::new(ctx.data().request_client.clone(), next_track.metadata.url.clone());
+                let track: YoutubeDl = YoutubeDl::new(ctx.data().request_client.clone(), next_track.metadata.track_url.clone());
                 let track_handle: TrackHandle = guard.play(track.into());
 
                 // Add event to handle the track end

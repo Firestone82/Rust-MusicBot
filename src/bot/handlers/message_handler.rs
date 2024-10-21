@@ -21,7 +21,8 @@ pub fn create_now_playing_embed(track: &Track) -> CreateEmbed {
     CreateEmbed::new()
         .color(Color::DARK_GREEN)
         .title("▶️  Now playing")
-        .description(format!("[{}]({})", track.metadata.title, track.metadata.url))
+        .description(format!("[{}]({})", track.metadata.title, track.metadata.track_url))
+        .thumbnail(track.metadata.thumbnail_url.clone())
         .timestamp(Timestamp::now())
 }
 

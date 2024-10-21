@@ -14,6 +14,9 @@ pub enum YoutubeError {
 
     #[error("Video not found: {0}")]
     VideoNotFound(String),
+    
+    #[error("Playlist not found: {0}")]
+    PlaylistNotFound(String),
 
     #[error("Youtube API error: {0}")]
     ApiError(#[from] google_youtube3::Error),
@@ -54,12 +57,42 @@ impl YoutubeClient {
         }
     }
 
+    pub async fn search_playlist(&self, url: String) -> Result<Vec<Track>, YoutubeError> {
+        let request = self
+            .youtube
+            .search()
+            .list(&vec![
+                String::from("snippet"),
+            ])
+            .q(&url)
+            .param("key", &self.api_key)
+            .add_type("playlist")
+            .max_results(1);
+        
+        let (_, list) = request.doit().await.map_err(|error| {
+            println!("{}", error);
+            YoutubeError::ApiError(error)
+        })?;
+        
+        match list.items {
+            Some(items) => {
+                println!("{:?}", items);
+            }
+            
+            None => {
+                println!("No items found");
+            }
+        }
+        
+        Result::Ok(vec![])
+    }
+    
     pub async fn search_track(&self, url: String) -> Result<Vec<Track>, YoutubeError> {
         let request = self
             .youtube
             .search()
             .list(&vec![
-                String::from("snippet")
+                String::from("snippet"),
             ])
             .q(&url)
             .param("key", &self.api_key)
@@ -84,13 +117,27 @@ impl YoutubeClient {
             let metadata: Option<TrackMetadata> = result.snippet.as_ref().and_then(|snippet| {
                 let title: Option<&String> = snippet.title.as_ref();
                 let channel: Option<&String> = snippet.channel_title.as_ref();
+                let thumbnail_url: Option<&String> = snippet
+                    .thumbnails
+                    .as_ref()
+                    .and_then(|details| {
+                        details
+                            .maxres
+                            .as_ref()
+                            .or(details.high.as_ref())
+                            .or(details.medium.as_ref())
+                            .or(details.standard.as_ref())
+                            .or(details.default.as_ref())
+                    })
+                    .and_then(|thumbnail| thumbnail.url.as_ref());
 
-                match (video_id.clone(), title, channel) {
-                    (Some(video_id), Some(title), Some(channel)) => Some(
+                match (video_id.clone(), title, channel, thumbnail_url) {
+                    (Some(video_id), Some(title), Some(channel), Some(thumbnail_url)) => Some(
                         TrackMetadata {
                             title: decode_html_entities(title).to_string(),
                             channel: decode_html_entities(channel).to_string(),
-                            url: format!("{SINGLE_URI}{video_id}"),
+                            track_url: format!("{SINGLE_URI}{video_id}"),
+                            thumbnail_url: thumbnail_url.to_string(),
                         }
                     ),
                     _ => None,
@@ -104,7 +151,7 @@ impl YoutubeClient {
                         metadata,
                     }
                 ),
-                _ => Err(YoutubeError::InternalError("Failed to parse video".to_string()))
+                _ => Err(YoutubeError::InternalError("Failed to parse video".to_owned()))
             }
         }).collect::<Result<Vec<Track>, YoutubeError>>()?;
 
