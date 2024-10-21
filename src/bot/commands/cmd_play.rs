@@ -12,14 +12,16 @@ use tokio::sync::RwLockWriteGuard;
     prefix_command,
     check = "check_author_in_same_voice_channel",
 )]
-pub async fn play(ctx: Context<'_>, youtube_url: String) -> Result<(), MusicBotError> {
+pub async fn play(ctx: Context<'_>, youtube_url: Vec<String>) -> Result<(), MusicBotError> {
+    let youtube_url: String = youtube_url.join(" ");
+    
     if let Err(error) = channel_handler::join_user_channel(ctx).await {
         println!("Error joining voice channel: {:?}", error);
         ctx.send(CreateReply::default().embed(message_handler::create_playback_error_embed(error.to_string()))).await?;
     }
 
     let youtube_client: &YoutubeClient = &ctx.data().youtube_client;
-    let result: Result<Track, YoutubeError> = youtube_client.search_video(youtube_url).await;
+    let result: Result<Track, YoutubeError> = youtube_client.fetch_track(youtube_url).await;
 
     match result {
         Ok(track) => {

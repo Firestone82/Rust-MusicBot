@@ -54,7 +54,7 @@ impl YoutubeClient {
         }
     }
 
-    pub async fn search_video(&self, url: String) -> Result<Track, YoutubeError> {
+    pub async fn search_track(&self, url: String) -> Result<Vec<Track>, YoutubeError> {
         let request = self
             .youtube
             .search()
@@ -64,7 +64,7 @@ impl YoutubeClient {
             .q(&url)
             .param("key", &self.api_key)
             .add_type("video")
-            .max_results(1);
+            .max_results(5);
 
         let (_, list) = request.doit().await.map_err(|error| {
             println!("{}", error);
@@ -72,46 +72,51 @@ impl YoutubeClient {
         })?;
 
         let results: Vec<SearchResult> = list.items.ok_or_else(|| {
-            YoutubeError::InternalError("No video found".to_string())
+            YoutubeError::VideoNotFound(url.clone())
         })?;
 
-        if results.is_empty() {
-            return Err(YoutubeError::VideoNotFound(url));
-        }
+        let tracks: Vec<Track> = results.iter().map(|result| {
+            let video_id: Option<String> = result
+                .id
+                .as_ref()
+                .and_then(|resource_id| resource_id.video_id.clone());
 
-        let result: &SearchResult = results
-            .first()
-            .ok_or_else(|| YoutubeError::InternalError("No video found".to_string()))?;
+            let metadata: Option<TrackMetadata> = result.snippet.as_ref().and_then(|snippet| {
+                let title: Option<&String> = snippet.title.as_ref();
+                let channel: Option<&String> = snippet.channel_title.as_ref();
 
-        let video_id: Option<String> = result
-            .id
-            .as_ref()
-            .and_then(|resource_id| resource_id.video_id.clone());
+                match (video_id.clone(), title, channel) {
+                    (Some(video_id), Some(title), Some(channel)) => Some(
+                        TrackMetadata {
+                            title: decode_html_entities(title).to_string(),
+                            channel: decode_html_entities(channel).to_string(),
+                            url: format!("{SINGLE_URI}{video_id}"),
+                        }
+                    ),
+                    _ => None,
+                }
+            });
 
-        let metadata: Option<TrackMetadata> = result.snippet.as_ref().and_then(|snippet| {
-            let title: Option<&String> = snippet.title.as_ref();
-            let channel: Option<&String> = snippet.channel_title.as_ref();
-
-            match (video_id.clone(), title, channel) {
-                (Some(video_id), Some(title), Some(channel)) => Some(
-                    TrackMetadata {
-                        title: decode_html_entities(title).to_string(),
-                        channel: decode_html_entities(channel).to_string(),
-                        url: format!("{SINGLE_URI}{video_id}"),
+            match(video_id, metadata) {
+                (Some(id), Some(metadata)) => Ok(
+                    Track {
+                        id,
+                        metadata,
                     }
                 ),
-                _ => None,
+                _ => Err(YoutubeError::InternalError("Failed to parse video".to_string()))
             }
-        });
+        }).collect::<Result<Vec<Track>, YoutubeError>>()?;
 
-        match(video_id, metadata) {
-            (Some(id), Some(metadata)) => Ok(
-                Track {
-                    id,
-                    metadata,
-                }
-            ),
-            _ => Err(YoutubeError::InternalError("Failed to parse video".to_string()))
+        Ok(tracks)
+    }
+    
+    pub async fn fetch_track(&self, url: String) -> Result<Track, YoutubeError> {
+        let tracks: Vec<Track> = self.search_track(url.clone()).await?;
+
+        match tracks.first() {
+            Some(track) => Ok(track.clone()),
+            None => Err(YoutubeError::VideoNotFound(url))
         }
     }
 }
