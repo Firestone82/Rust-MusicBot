@@ -27,6 +27,13 @@ pub struct YoutubeClient {
 const SINGLE_URI: &str = "https://www.youtube.com/watch?v=";
 const PLAYLIST_URI: &str = "https://www.youtube.com/playlist?list=";
 
+// IDFK what this does
+impl Default for YoutubeClient {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl YoutubeClient {
     pub fn new() -> Self {
         let youtube_token = var("YOUTUBE_TOKEN").expect("Expected a token in the environment.");

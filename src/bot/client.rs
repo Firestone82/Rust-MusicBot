@@ -88,31 +88,21 @@ impl MusicBotClient {
                     prefix: Some(String::from("!")),
                     ..Default::default()
                 },
-                // event_handler: |_ctx, event, _framework, _data| {
-                //     Box::pin(async move {
-                //         println!(
-                //             "Got an event in event handler: {:?}",
-                //             event.snake_case_name()
-                //         );
-                //         Ok(())
-                //     })
-                // },
                 ..Default::default()
             })
             .setup(move |ctx, ready, fw| {
                 Box::pin(async move {
                     println!("Logged in as {}", ready.user.name);
-                    let guild_id = ready.guilds[0].id;
+                    let guild_id: GuildId = ready.guilds[0].id;
 
-                    let registration_res = if !production {
+                    let _ = if !production {
                         println!("- Registering commands in guild");
 
                         poise::builtins::register_in_guild(
                             &ctx.http,
                             &fw.options().commands,
-                            serenity_prelude::GuildId::new(guild_id.get()),
-                        )
-                            .await
+                            guild_id,
+                        ).await
                     } else {
                         poise::builtins::register_globally(ctx, &fw.options().commands).await
                     };

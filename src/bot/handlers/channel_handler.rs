@@ -1,15 +1,17 @@
 use crate::bot::client::{Context, MusicBotError};
-use serenity::all::{ChannelId, UserId};
+use serenity::all::{ChannelId, GuildId, UserId};
+use songbird::Songbird;
+use std::sync::Arc;
 
 pub async fn join_user_channel(ctx: Context<'_>) -> Result<(), MusicBotError> {
-    let guild_id = ctx.guild_id().ok_or_else(|| {
+    let guild_id: GuildId = ctx.guild_id().ok_or_else(|| {
         println!("Could not locate voice channel. Guild ID is none");
         MusicBotError::InternalError("Could not locate voice channel. Guild ID is none".to_owned())
     })?;
 
     match get_user_voice_channel(ctx, &ctx.author().id).await {
         Some(user_channel) => {
-            let manager = songbird::get(ctx.serenity_context())
+            let manager: Arc<Songbird> = songbird::get(ctx.serenity_context())
                 .await
                 .ok_or_else(|| {
                     MusicBotError::InternalError("Could not locate voice channel. Songbird manager does not exist".to_owned())
