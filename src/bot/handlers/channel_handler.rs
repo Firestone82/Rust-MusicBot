@@ -1,6 +1,8 @@
 use crate::bot::client::{Context, MusicBotError};
+use crate::bot::handlers::disconnect_handler::{DisconnectHandler, InactivityHandler};
+use crate::event_handlers::error_handler::ErrorHandler;
 use serenity::all::{ChannelId, GuildId, UserId};
-use songbird::Songbird;
+use songbird::{CoreEvent, Event, Songbird};
 use std::sync::Arc;
 
 pub async fn join_user_channel(ctx: Context<'_>) -> Result<(), MusicBotError> {
@@ -17,8 +19,35 @@ pub async fn join_user_channel(ctx: Context<'_>) -> Result<(), MusicBotError> {
                     MusicBotError::InternalError("Could not locate voice channel. Songbird manager does not exist".to_owned())
                 })?;
 
-            if (manager.join(guild_id, user_channel).await).is_err() {
-                return Err(MusicBotError::UnableToJoinVoiceChannelError)
+            match manager.join(guild_id, user_channel).await {
+                Ok(handle_lock) => {
+                    let mut handle = handle_lock.lock().await;
+
+                    // Event listener to disconnect the bot if the driver disconnects
+                    handle.add_global_event(
+                        Event::Core(CoreEvent::DriverDisconnect),
+                        DisconnectHandler::new(guild_id, manager.clone()),
+                    );
+
+                    // Event listener to disconnect the bot if there is no activity in the voice channel
+                    handle.add_global_event(
+                        Event::Core(CoreEvent::ClientDisconnect),
+                        InactivityHandler::new(guild_id, manager.clone(), ctx.serenity_context().cache.clone())
+                    );
+
+                    // Event listener for when there is an error with the track
+                    handle.add_global_event(
+                        Event::Track(songbird::TrackEvent::Error), 
+                        ErrorHandler
+                    );
+                    
+                    println!("Joined voice channel: {:?}", user_channel);
+                }
+
+                Err(error) => {
+                    println!("Error joining voice channel: {:?}", error);
+                    return Err(MusicBotError::UnableToJoinVoiceChannelError)
+                }
             }
         }
 
