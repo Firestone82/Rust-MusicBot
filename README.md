@@ -1,4 +1,4 @@
-<img width="15%" src="assets/icon-no-bg.png" align="right" alt="Icon">
+<img width="18%" src="assets/icon-no-bg.png" align="right" alt="Icon">
 <br>
 <br>
 
