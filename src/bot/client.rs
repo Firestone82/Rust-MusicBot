@@ -3,6 +3,8 @@ use crate::bot::player::playback::Playback;
 use crate::bot::youtube::client::YoutubeClient;
 use dotenv::var;
 use poise::serenity_prelude;
+use serenity::all::GuildId;
+use sqlx::{Pool, Sqlite};
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
@@ -26,7 +28,7 @@ pub enum MusicBotError {
     UnableToJoinVoiceChannelError,
 }
 
-impl From<poise::serenity_prelude::Error> for MusicBotError {
+impl From<serenity_prelude::Error> for MusicBotError {
     fn from(value: serenity_prelude::Error) -> Self {
         MusicBotError::InternalError(value.to_string())
     }
@@ -35,7 +37,8 @@ impl From<poise::serenity_prelude::Error> for MusicBotError {
 pub struct MusicBotData {
     pub request_client: reqwest::Client,
     pub youtube_client: YoutubeClient,
-    pub playback: Arc<RwLock<Playback>>
+    pub playback: Arc<RwLock<Playback>>,
+    pub database: Arc<RwLock<sqlx::SqlitePool>>
 }
 
 pub struct MusicBotClient {
@@ -55,6 +58,21 @@ impl MusicBotClient {
 
         let discord_token = var("DISCORD_TOKEN").expect("Expected a token in the environment.");
         let production: bool = var("PRODUCTION").expect("Expected a boolean in the environment.") == "true";
+
+        let database: Pool<Sqlite> = sqlx::sqlite::SqlitePoolOptions::new()
+            .max_connections(5)
+            .connect_with(
+                sqlx::sqlite::SqliteConnectOptions::new()
+                    .filename("database.sqlite")
+                    .create_if_missing(true),
+            )
+            .await
+            .expect("Couldn't connect to database");
+
+        sqlx::migrate!("./migrations")
+            .run(&database)
+            .await
+            .expect("Couldn't run database migrations");
 
         let framework = poise::Framework::<MusicBotData, MusicBotError>::builder()
             .options(poise::FrameworkOptions {
@@ -103,6 +121,7 @@ impl MusicBotClient {
                         request_client: reqwest::Client::new(),
                         youtube_client: YoutubeClient::new(),
                         playback:  Arc::new(RwLock::new(Playback::default())),
+                        database: Arc::new(RwLock::new(database))
                     })
                 })
             })
