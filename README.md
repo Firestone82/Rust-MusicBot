@@ -1,4 +1,5 @@
-<img width="20%" src="assets/icon-no-bg.png" align="right" alt="Icon">
+<img width="15%" src="assets/icon-no-bg.png" align="right" alt="Icon">
+<br>
 <br>
 
 # Project for PvR (Discord MusicBot in Rust)
